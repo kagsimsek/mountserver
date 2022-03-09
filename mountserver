@@ -1,0 +1,54 @@
+#!/bin/bash 
+
+remote_user= 
+remote_host=
+remote_dir=
+local_mnt_dir=
+local_mnt_point=
+local_dir=$local_mnt_point/$local_mnt_dir
+
+clear
+echo -e -n 'looking for sshfs... '
+if ! command -v sshfs &> /dev/null
+then
+  echo 'not found'
+  echo 'hint: download macfuse and sshfs from `https://osxfuse.github.io`'
+  echo 'aborting session...'
+else
+  echo 'yes'
+  echo -e -n "checking if $local_dir exists... "
+  if [ ! -d $local_dir ]
+  then
+    echo 'no'
+    mkdir $local_dir
+    echo "local directory $local_dir created."
+  else
+    echo 'yes'
+  fi
+  echo -e -n 'checking if already mounted...'
+  if mount | grep -q "on $local_dir"
+  then
+      echo 'yes'
+      echo -e -n 'trying to unmount... '
+      diskutil unmount $local_dir
+      if mount | grep -q "on $local_dir"
+      then
+          echo 'fail'
+          echo 'ending sequence...'
+      else
+          echo 'success'
+          echo 'mounting quest...'
+          sshfs $remote_user@$remote_host:$remote_dir $local_dir -ovolname=$local_mnt_dir 2>/dev/null
+          echo 'opening directory with finder...'
+          open $local_dir &
+          ssh -Y $remote_user@$remote_host
+	  fi
+  else
+      echo 'no'
+      echo "mounting quest into $local_dir..."
+      sshfs $remote_user@$remote_host:$remote_dir $local_dir -ovolname=$local_mnt_dir 2>/dev/null
+      echo 'opening directory with finder...'
+      open $local_dir &
+      ssh -Y $remote_user@$remote_host
+  fi
+fi
